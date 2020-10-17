@@ -65,11 +65,14 @@ class MusicLibrary {
       // eslint-disable-next-line max-len
       const result = await this.sonos.searchMusicLibrary(category, searchTerm, options.searchOptions, separator);
       if (!result) return MusicLibrary._getEmptyReturnResult();
-      if (options.getAlbumArt) {
+      if (options.getAlbumArt && result.items) {
         switch (options.searchCategory) {
           case 'albumArtists':
           case 'genres':
           case 'playlists':
+          case 'share':
+            break
+          default:
             await Promise.all(result.items.map(async (item, index) => {
               try {
                 // Get the album art
@@ -85,8 +88,6 @@ class MusicLibrary {
                 }
               }
             }));
-            break;
-          default:
             break;
         }
       }
@@ -117,7 +118,7 @@ class MusicLibrary {
         searchOptions: { start: 0, total },
         search: true,
       });
-      if (result.items.length) {
+      if (result.items && result.items.length) {
         topResults[item] = result;
       }
     }));
@@ -172,6 +173,7 @@ class MusicLibrary {
     };
     const options = { ...defaultOptions, ...searchOptions };
     if (this._sonosPlaylistCache) {
+      if (!this._sonosPlaylistCache.items) return MusicLibrary._getEmptyReturnResult();
       const items = this._sonosPlaylistCache.items.slice(options.start, options.total);
       return {
         total: String(this._sonosPlaylistCache.length),
@@ -183,6 +185,7 @@ class MusicLibrary {
       const playlists = await this.sonos.getMusicLibrary('sonos_playlists');
       if (!playlists) throw new Error(NoResultsFound);
       this._sonosPlaylistCache = playlists;
+      if (!playlists.items) return MusicLibrary._getEmptyReturnResult();
       const items = playlists.items.slice(options.start, options.total);
       return {
         total: String(playlists.length),
